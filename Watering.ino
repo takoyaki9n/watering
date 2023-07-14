@@ -1,10 +1,12 @@
 #define SERIAL_ON
+#define PERIOD 10
+
+int counter;
 
 int pinPumps[2] = { 10, 16 };
 int pinSensors[2] = { A0, A1 };
 
 int pinLED = 9;
-int cntLED;
 
 void setupModules(int id) {
   pinMode(pinPumps[id], OUTPUT);
@@ -13,6 +15,7 @@ void setupModules(int id) {
 }
 
 void setup() {
+  counter = 0;
 #ifdef SERIAL_ON
   Serial.begin(9600);
 #endif
@@ -21,8 +24,7 @@ void setup() {
   setupModules(1);
 
   pinMode(pinLED, OUTPUT);
-  digitalWrite(pinLED, HIGH);
-  cntLED = 0;
+  digitalWrite(pinLED, LOW);
 
   delay(500);
 }
@@ -37,15 +39,23 @@ void operateModules(int id, float threshold) {
   Serial.println(value);
 #endif
 
-  digitalWrite(pinPumps[id], value < threshold ? HIGH : LOW);
+  // Sensor value is low when it's wet.
+  int runPump = (counter % PERIOD == id) && (value > threshold);
+  // `LOW` to run the pump, `HIGH` to stop it.
+  digitalWrite(pinPumps[id], runPump ? LOW : HIGH);
 }
 
 void loop() {
   operateModules(0, 500);
   operateModules(1, 500);
 
-  digitalWrite(pinLED, cntLED == 0 ? HIGH : LOW);
-  cntLED = (cntLED + 1) % 10;
+  int blinkLED = counter % PERIOD == 0;
+  digitalWrite(pinLED, blinkLED ? HIGH : LOW);
 
+#ifdef SERIAL_ON
+  Serial.print("COUNT: ");
+  Serial.println(counter);
+#endif
+  counter++;
   delay(1000);
 }
