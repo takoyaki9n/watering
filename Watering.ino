@@ -1,12 +1,24 @@
-#define SERIAL_ON
-#define PERIOD 10
+#include "avr/sleep.h"
+#include "avr/wdt.h"
 
-int counter;
+// Time definitions for Watch-dog-timer
+#define WDT_1S B00000110  // 1s
+#define WDT_2S B00000111  // 2s
+#define WDT_4S B00100000  // 4s
+#define WDT_8S B00100001  // 8s
+
+#define SERIAL_ON
+// 1 hour (= 60 * 60 / 8)
+#define INTERVAL 450
+
+int pinButton = 8;
+int pinLED = 9;
 
 int pinPumps[2] = { 10, 16 };
 int pinSensors[2] = { A0, A1 };
 
-int pinLED = 9;
+// Intrpt svc rtn for WDT ISR (vect)
+ISR(WDT_vect) {}
 
 void setupModules(int id) {
   pinMode(pinPumps[id], OUTPUT);
@@ -14,8 +26,17 @@ void setupModules(int id) {
   digitalWrite(pinPumps[id], HIGH);
 }
 
+void setupWDT(byte sleepT) {
+  sleepT += B00010000;  // sleepTime + Enalbe WD-change bit-on
+  MCUSR &= B11110111;   // Prepare WDT-reset-flag in MCU-status-Reg
+  WDTCSR |= B00011000;  // Enable WD-system-reset + WD-change
+  WDTCSR = sleepT;      // Set sleepTime + Enable WD-change
+  WDTCSR |= B01000000;  // Finally, enable WDT-interrrupt
+}
+
+int didPumpRun;
+
 void setup() {
-  counter = 0;
 #ifdef SERIAL_ON
   Serial.begin(9600);
 #endif
@@ -23,13 +44,17 @@ void setup() {
   setupModules(0);
   setupModules(1);
 
+  pinMode(pinButton, INPUT);
+
   pinMode(pinLED, OUTPUT);
   digitalWrite(pinLED, LOW);
 
-  delay(500);
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  setupWDT(WDT_8S);
 }
 
 void operateModules(int id, float threshold) {
+  // The `value` is high when it's dry.
   int value = analogRead(pinSensors[id]);
 
 #ifdef SERIAL_ON
@@ -39,23 +64,34 @@ void operateModules(int id, float threshold) {
   Serial.println(value);
 #endif
 
-  // Sensor value is low when it's wet.
-  int runPump = (counter % PERIOD == id) && (value > threshold);
-  // `LOW` to run the pump, `HIGH` to stop it.
-  digitalWrite(pinPumps[id], runPump ? LOW : HIGH);
+  if (value > threshold) {
+    // `LOW` to run the pump, `HIGH` to stop it.
+    digitalWrite(pinPumps[id], LOW);
+    didPumpRun = 1;
+    delay(1000);
+  }
+  digitalWrite(pinPumps[id], HIGH);
+}
+
+void deepSleep(void) {
+  ADCSRA &= B01111111;  // disable ADC to save power
+  sleep_enable();
+  sleep_cpu();  // sleep until WDT-interrupt
+  sleep_disable();
+  ADCSRA |= B10000000;  // enable ADC again
 }
 
 void loop() {
+  didPumpRun = 0;
+  digitalWrite(pinLED, HIGH);
   operateModules(0, 500);
   operateModules(1, 500);
+  if (didPumpRun == 0) delay(500);
+  digitalWrite(pinLED, LOW);
 
-  int blinkLED = counter % PERIOD == 0;
-  digitalWrite(pinLED, blinkLED ? HIGH : LOW);
-
-#ifdef SERIAL_ON
-  Serial.print("COUNT: ");
-  Serial.println(counter);
-#endif
-  counter++;
-  delay(1000);
+  for (int i = 0; i < INTERVAL; i++) {
+    int button = digitalRead(pinButton);
+    if (button) break;
+    deepSleep();
+  }
 }
