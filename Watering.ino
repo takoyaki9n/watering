@@ -11,9 +11,9 @@
 // 2 hours (= 60 * 60 / 8)
 #define INTERVAL 900
 
-int pinButton = 8;
+int pinButton = 9;
 
-int pinPower = 7;
+int pinPowers[2] = { 8, 7 };
 int pinPumps[2] = { 10, 16 };
 int pinSensors[2] = { A0, A1 };
 
@@ -22,9 +22,11 @@ ISR(WDT_vect) {}
 void interrupt() {}
 
 void setupModules(int id) {
+  pinMode(pinPowers[id], OUTPUT);
+  digitalWrite(pinPowers[id], LOW);
   pinMode(pinPumps[id], OUTPUT);
-  pinMode(pinSensors[id], INPUT);
   digitalWrite(pinPumps[id], HIGH);
+  pinMode(pinSensors[id], INPUT);
 }
 
 void setupWDT(byte sleepT) {
@@ -43,8 +45,6 @@ void setup() {
   pinMode(pinButton, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(pinButton), interrupt, FALLING);
 
-  pinMode(pinPower, OUTPUT);
-  digitalWrite(pinPower, LOW);
   setupModules(0);
   setupModules(1);
 
@@ -53,8 +53,11 @@ void setup() {
 }
 
 void operateModules(int id, float threshold) {
+  digitalWrite(pinPowers[id], HIGH);
+  delay(100);
   // The `value` is high when it's dry.
   int value = analogRead(pinSensors[id]);
+  digitalWrite(pinPowers[id], LOW);
 
 #ifdef SERIAL_ON
   Serial.print("MOISTURE LEVEL #");
@@ -80,11 +83,8 @@ void deepSleep(void) {
 }
 
 void loop() {
-  digitalWrite(pinPower, HIGH);
-  delay(100);
   operateModules(0, 500);
   operateModules(1, 500);
-  digitalWrite(pinPower, LOW);
 
   for (int i = 0; i < INTERVAL; i++) {
     int button = digitalRead(pinButton);
