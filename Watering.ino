@@ -10,10 +10,8 @@
 #define SERIAL_ON
 // 2 hours (= 60 * 60 / 8)
 #define INTERVAL 900
-#define BLINK_PERIOD 10
 
 int pinButton = 8;
-int pinLED = 9;
 
 int pinPumps[2] = { 10, 16 };
 int pinSensors[2] = { A0, A1 };
@@ -44,9 +42,6 @@ void setup() {
   setupModules(1);
 
   pinMode(pinButton, INPUT);
-
-  pinMode(pinLED, OUTPUT);
-  digitalWrite(pinLED, LOW);
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   setupWDT(WDT_8S);
@@ -91,9 +86,5 @@ void loop() {
     } else {
       deepSleep();
     }
-
-    digitalWrite(pinLED, HIGH);
-    delay(10);
-    digitalWrite(pinLED, LOW);
   }
 }
