@@ -8,8 +8,9 @@
 #define WDT_8S B00100001  // 8s
 
 #define SERIAL_ON
-// 1 hour (= 60 * 60 / 8)
-#define INTERVAL 450
+// 2 hours (= 60 * 60 / 8)
+#define INTERVAL 900
+#define BLINK_PERIOD 10
 
 int pinButton = 8;
 int pinLED = 9;
@@ -33,8 +34,6 @@ void setupWDT(byte sleepT) {
   WDTCSR = sleepT;      // Set sleepTime + Enable WD-change
   WDTCSR |= B01000000;  // Finally, enable WDT-interrrupt
 }
-
-int didPumpRun;
 
 void setup() {
 #ifdef SERIAL_ON
@@ -67,7 +66,6 @@ void operateModules(int id, float threshold) {
   if (value > threshold) {
     // `LOW` to run the pump, `HIGH` to stop it.
     digitalWrite(pinPumps[id], LOW);
-    didPumpRun = 1;
     delay(1000);
   }
   digitalWrite(pinPumps[id], HIGH);
@@ -82,16 +80,20 @@ void deepSleep(void) {
 }
 
 void loop() {
-  didPumpRun = 0;
-  digitalWrite(pinLED, HIGH);
   operateModules(0, 500);
   operateModules(1, 500);
-  if (didPumpRun == 0) delay(500);
-  digitalWrite(pinLED, LOW);
 
   for (int i = 0; i < INTERVAL; i++) {
     int button = digitalRead(pinButton);
-    if (button) break;
-    deepSleep();
+    if (button) {
+      delay(1000);
+      break;
+    } else {
+      deepSleep();
+    }
+
+    digitalWrite(pinLED, HIGH);
+    delay(10);
+    digitalWrite(pinLED, LOW);
   }
 }
