@@ -13,11 +13,13 @@
 
 int pinButton = 8;
 
+int pinPower = 7;
 int pinPumps[2] = { 10, 16 };
 int pinSensors[2] = { A0, A1 };
 
 // Intrpt svc rtn for WDT ISR (vect)
 ISR(WDT_vect) {}
+void interrupt() {}
 
 void setupModules(int id) {
   pinMode(pinPumps[id], OUTPUT);
@@ -38,10 +40,13 @@ void setup() {
   Serial.begin(9600);
 #endif
 
+  pinMode(pinButton, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(pinButton), interrupt, FALLING);
+
+  pinMode(pinPower, OUTPUT);
+  digitalWrite(pinPower, LOW);
   setupModules(0);
   setupModules(1);
-
-  pinMode(pinButton, INPUT);
 
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   setupWDT(WDT_8S);
@@ -75,16 +80,15 @@ void deepSleep(void) {
 }
 
 void loop() {
+  digitalWrite(pinPower, HIGH);
+  delay(100);
   operateModules(0, 500);
   operateModules(1, 500);
+  digitalWrite(pinPower, LOW);
 
   for (int i = 0; i < INTERVAL; i++) {
     int button = digitalRead(pinButton);
-    if (button) {
-      delay(1000);
-      break;
-    } else {
-      deepSleep();
-    }
+    if (!button) break;
+    deepSleep();
   }
 }
