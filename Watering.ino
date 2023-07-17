@@ -11,11 +11,12 @@
 // 2 hours (= 60 * 60 / 8)
 #define INTERVAL 900
 
-int pinButton = 9;
+const uint8_t pinButton = 9;
+const uint8_t pinLED = 2;
 
-int pinPowers[2] = { 8, 7 };
-int pinPumps[2] = { 10, 16 };
-int pinSensors[2] = { A0, A1 };
+const uint8_t pinPowers[2] = { 8, 7 };
+const uint8_t pinPumps[2] = { 10, 16 };
+const uint8_t pinSensors[2] = { A0, A1 };
 
 // Intrpt svc rtn for WDT ISR (vect)
 ISR(WDT_vect) {}
@@ -44,6 +45,9 @@ void setup() {
 
   pinMode(pinButton, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(pinButton), interrupt, FALLING);
+
+  pinMode(pinLED, OUTPUT);
+  digitalWrite(pinLED, LOW);
 
   setupModules(0);
   setupModules(1);
@@ -87,6 +91,9 @@ void loop() {
   operateModules(1, 500);
 
   for (int i = 0; i < INTERVAL; i++) {
+    digitalWrite(pinLED, HIGH);
+    delay(50);
+    digitalWrite(pinLED, LOW);
     int button = digitalRead(pinButton);
     if (!button) break;
     deepSleep();
