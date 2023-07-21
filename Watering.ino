@@ -8,26 +8,38 @@
 #define WDT_8S B00100001  // 8s
 
 #define SERIAL_ON
-// 2 hours (= 60 * 60 / 8)
-#define INTERVAL 900
+//#define SENSOR_ON
+
+// 2 hours (= 2 * 60 * 60 / 8)
+#define INTERVAL_2H 900
+// 12 hours (= 12 * 60 * 60 / 8)
+#define INTERVAL_12H 5400
+#define INTERVAL INTERVAL_12H
 
 const uint8_t pinButton = 9;
 const uint8_t pinLED = 2;
 
-const uint8_t pinPowers[2] = { 8, 7 };
 const uint8_t pinPumps[2] = { 10, 16 };
+
+#ifdef SENSOR_ON
+const uint8_t pinPowers[2] = { 8, 7 };
 const uint8_t pinSensors[2] = { A0, A1 };
+const int thresholds[2] = { 500, 500 };
+#endif
 
 // Intrpt svc rtn for WDT ISR (vect)
 ISR(WDT_vect) {}
-void interrupt() {}
 
 void setupModules(int id) {
-  pinMode(pinPowers[id], OUTPUT);
-  digitalWrite(pinPowers[id], LOW);
   pinMode(pinPumps[id], OUTPUT);
   digitalWrite(pinPumps[id], HIGH);
+
+#ifdef SENSOR_ON
+  pinMode(pinPowers[id], OUTPUT);
+  digitalWrite(pinPowers[id], LOW);
+
   pinMode(pinSensors[id], INPUT);
+#endif
 }
 
 void setupWDT(byte sleepT) {
@@ -44,7 +56,6 @@ void setup() {
 #endif
 
   pinMode(pinButton, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(pinButton), interrupt, FALLING);
 
   pinMode(pinLED, OUTPUT);
   digitalWrite(pinLED, LOW);
@@ -56,9 +67,17 @@ void setup() {
   setupWDT(WDT_8S);
 }
 
-void operateModules(int id, float threshold) {
+void runPump(uint8_t id, unsigned long duration) {
+  // `LOW` to run the pump, `HIGH` to stop it.
+  digitalWrite(pinPumps[id], LOW);
+  delay(duration);
+  digitalWrite(pinPumps[id], HIGH);
+}
+
+#ifdef SENSOR_ON
+void operateModules(uint8_t id, unsigned long duration) {
   digitalWrite(pinPowers[id], HIGH);
-  delay(100);
+  delay(1000);
   // The `value` is high when it's dry.
   int value = analogRead(pinSensors[id]);
   digitalWrite(pinPowers[id], LOW);
@@ -70,13 +89,11 @@ void operateModules(int id, float threshold) {
   Serial.println(value);
 #endif
 
-  if (value > threshold) {
-    // `LOW` to run the pump, `HIGH` to stop it.
-    digitalWrite(pinPumps[id], LOW);
-    delay(1000);
+  if (value > thresholds[id]) {
+    runPump(id, duration);
   }
-  digitalWrite(pinPumps[id], HIGH);
 }
+#endif
 
 void deepSleep(void) {
   ADCSRA &= B01111111;  // disable ADC to save power
@@ -87,8 +104,13 @@ void deepSleep(void) {
 }
 
 void loop() {
-  operateModules(0, 500);
-  operateModules(1, 500);
+#ifdef SENSOR_ON
+  operateModules(0, 2000);
+  operateModules(1, 2000);
+#else
+  runPump(0, 2000);
+  runPump(1, 2000);
+#endif
 
   for (int i = 0; i < INTERVAL; i++) {
     digitalWrite(pinLED, HIGH);
