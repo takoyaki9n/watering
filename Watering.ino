@@ -8,13 +8,13 @@
 #define WDT_8S B00100001  // 8s
 
 #define SERIAL_ON
-//#define SENSOR_ON
+#define SENSOR_ON
 
 // 2 hours (= 2 * 60 * 60 / 8)
 #define INTERVAL_2H 900
 // 12 hours (= 12 * 60 * 60 / 8)
 #define INTERVAL_12H 5400
-#define INTERVAL INTERVAL_12H
+#define INTERVAL INTERVAL_2H
 
 const uint8_t pinButton = 9;
 const uint8_t pinLED = 2;
