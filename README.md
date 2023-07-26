@@ -36,3 +36,8 @@ However, you should not run multiple pumps simultaneously so that each pump work
 | |2|Tee tube connector|To connect check bulbs|
 
 ![schematic](./Watering.svg)
+
+## Reference
+- https://github.com/WayinTop/Automatic-Watering-System-JP/tree/master
+- http://7ujm.net/micro/arduino_sleep.html
+- https://elchika.com/article/b370bcd3-da52-4aef-bd5f-1d762910c0d0/
