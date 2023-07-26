@@ -2,7 +2,7 @@
 Watering system built with [WayinTop's DIY kit](https://github.com/WayinTop/Automatic-Watering-System-JP).
 
 ## How to use
-It checks the values of soil moisture sensors periodicaly (2 hours by default) and run the pumps if it is dry (the sensor value is higher than threshold). You can omit sensors by commenting out `#define SENSOR_ON`.
+It checks values of soil moisture sensors periodicaly (2 hours by default) and run pumps if it is dry (when the sensor value is higher than threshold). You can disable sensors by commenting out `#define SENSOR_ON`.
 
 The board sleeps while the interval except for the LED blinks every 8 seconds. The interval is canceled while the button is pushed.
 
